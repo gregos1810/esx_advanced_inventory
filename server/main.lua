@@ -2,7 +2,7 @@ ESX = nil
 
 local arrayWeight = Config.localWeight
 
-TriggerEvent('esx:getSharedObject', function(obj) 
+TriggerEvent('esx:getSharedObject', function(obj)
   ESX = obj
 end)
 
@@ -15,7 +15,7 @@ AddEventHandler('onMySQLReady', function ()
         for i=1, #result, 1 do
           arrayWeight[result[i].item] = result[i].weight
         end
-  
+
       end
     )
   end
@@ -43,35 +43,31 @@ end
 
 -- Get user speed
 -- https://runtime.fivem.net/doc/reference.html#_0x6DB47AA77FD94E09
-function getUserSpeed(weight)
-  local speed = 1.49
 
-  if weight > Config.Limit / 2 then
-  	speed = 1.49 * (weight / Config.Limit)
-  end
+RegisterServerEvent('esx_advanced_inventory:FUpdate')
+AddEventHandler('esx_advanced_inventory:FUpdate', function(xPlayer)
+  local source_ = source
+  local weight = getInventoryWeight(xPlayer)
+  TriggerClientEvent('esx_advanced_inventory:change',source_,weight)
+end)
 
-  if speed < 1.0 then
-  	speed = 1.0
-  end
 
-  if speed > 1.49 then
-  	speed = 1.0
-  end
+RegisterServerEvent('esx_advanced_inventory:Update')
+AddEventHandler('esx_advanced_inventory:Update', function(source)
+  local source_ = source
+  local xPlayer = ESX.GetPlayerFromId(source_)
+  local weight = getInventoryWeight(xPlayer)
+  TriggerClientEvent('esx_advanced_inventory:change',source_,weight)
+end)
 
-  return speed
-end
+
 
 RegisterServerEvent('esx:onAddInventoryItem')
 AddEventHandler('esx:onAddInventoryItem', function(source, item, count)
   local source_ = source
   local xPlayer = ESX.GetPlayerFromId(source_)
   local currentInventoryWeight = getInventoryWeight(xPlayer)
-
-  if Config.userSpeed == true then
-    local speed = getUserSpeed(currentInventoryWeight)
-    TriggerClientEvent('esx_advanced_inventory:speed', source_, speed)
-  end
-
+  TriggerEvent('esx_advanced_inventory:Update',source_)
   if currentInventoryWeight > Config.Limit then
     local xPlayer = ESX.GetPlayerFromId(source_)
     local itemWeight = Config.DefaultWeight
@@ -89,33 +85,25 @@ AddEventHandler('esx:onAddInventoryItem', function(source, item, count)
     if qty > count then
       qty = count
     end
-    ESX.CreatePickup('item_standard', item.name, qty, item.label, source_)
+    ESX.CreatePickup('item_standard', item.name, qty, item.label..'['..qty..']', source_)
     TriggerClientEvent('esx:showNotification', source_, 'Vous avez fait ~r~tomber~s~ ' .. item.label .. ' x' .. qty)
     xPlayer.removeInventoryItem(item.name, qty)
+    TriggerEvent('esx_advanced_inventory:Update',source_)
   end
 end)
 
 RegisterServerEvent('esx:onRemoveInventoryItem')
 AddEventHandler('esx:onRemoveInventoryItem', function(source, item, count)
+  TriggerEvent('esx_advanced_inventory:Update',source)
     if Config.userSpeed == true then
-      local source_ = ESX.GetPlayerFromId(source)
+      local source_ = source
       local xPlayer = ESX.GetPlayerFromId(source_)
       local currentInventoryWeight = getInventoryWeight(xPlayer)
       local speed = getUserSpeed(currentInventoryWeight)
-      TriggerClientEvent('esx_advanced_inventory:speed', source_, speed)
     end
 end)
 
-RegisterServerEvent('esx_advanced_inventory:initSpeed')
-AddEventHandler('esx_advanced_inventory:initSpeed', function(source)
-    if Config.userSpeed == true then
-      local source_ = ESX.GetPlayerFromId(source)
-      local xPlayer = ESX.GetPlayerFromId(source_)
-      local currentInventoryWeight = getInventoryWeight(xPlayer)
-      local speed = getUserSpeed(currentInventoryWeight)
-      TriggerClientEvent('esx_advanced_inventory:speed', source_, speed)
-    end
-end)
+
 
 
 -- WIP: Someone to contribute ? Extend user max weight when skin having a bag ?
